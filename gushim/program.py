@@ -5,16 +5,15 @@ import sys
 import yaml
 
 
-
 sys.path.insert(0, 'opentaba-gushim-prj')
 import opentaba_gushim_prj.gushim.mapi_service as mapi
 import opentaba_gushim_prj.gushim.compress as compress
-import opentaba_gushim_prj.gushim.GeoUtils as utils
+import opentaba_gushim_prj.gushim.GeoUtils as GeoUtils
 
 gushim_url ='https://data.gov.il/dataset/3ef36ec6-f0e3-447b-bc9d-9ab4b3cee783/resource/f7a10a68-fba5-430b-ac11-970611904034/download/subgushall-nodes.zip'
 
 
-def setup_logging(default_path='logging.yaml',default_level=logging.INFO,env_key='LOG_CFG'):
+def setup_logging(default_path='logging.yaml', default_level=logging.INFO, env_key='LOG_CFG'):
     """
     Setup logging configuration
     """
@@ -32,24 +31,28 @@ def setup_logging(default_path='logging.yaml',default_level=logging.INFO,env_key
     return logger
 
 
-def main():
-    # LOG_CFG = my_logging.yaml    python    my_server.py
-    logger = setup_logging()
-    # logging.config.fileConfig('logging.conf')
-    # logger = logging.getLogger("GushimApp")
+def get_mapi_uncompress_node_file(folder_path, mapi_format: str):
+    for (dirpath, dirnames, filenames) in os.walk(folder_path):
+        csv_files = [os.path.join(dirpath, fi) for fi in filenames if fi.endswith(mapi_format)]
+    return csv_files
 
+
+def main():
+    logger = setup_logging(default_level=logging.DEBUG)
     logger.info("Program started")
-    # print_header()
+
     folder = get_or_create_workspace_folder()
 
-    # file_name = mapi.get_gushim(folder, gushim_url)
-    # compress.zip_uncompress(file_name, folder)
+    file_name = mapi.get_gushim(folder, gushim_url)
+    # file_name = r'opentaba_gushim_prj/gushim/workspace/file_download.zip'
+    compress.zip_uncompress(file_name, folder)
+    csv_node_file = get_mapi_uncompress_node_file(folder, 'nodes.csv')
 
-    csv_loc_file = r'C:\Users\sephi\github\opentaba-gushim\opentaba_gushim_prj\gushim\workspace\subgushall-nodes\sub_gush_all-nodes.csv'
-    # utils.load_csv_into_json(csv_loc_file)
-    utils.csv_to_geojson(csv_loc_file)
+    GeoUtils.csv_to_geojson(csv_node_file[0])
 
-    # display_cats(folder)
+    #Generate Topojson (reuse)
+    #Push to GIT
+
 
 
 def get_or_create_workspace_folder():
@@ -63,9 +66,6 @@ def get_or_create_workspace_folder():
 
     return full_path
 
-
-# def download_gushim(folder, url):
-#     return
 
 
 if __name__ == '__main__':
