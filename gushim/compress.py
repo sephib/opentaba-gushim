@@ -46,7 +46,6 @@ def gzip_uncompress(gz_file, folder_path, destination_path=None):
             raise
     logger.info('uncompressed {0}'.format(gz_file))
 
-
 def main(folder_path):
     list_epop_files = []
     if os.listdir(folder_path).__len__() > 0:
