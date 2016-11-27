@@ -3,6 +3,7 @@ import logging.config
 import os
 import shutil
 import requests
+import datetime
 
 
 
@@ -26,5 +27,8 @@ def save_file(folder, name, data):
     with open(file_name, 'wb') as fout:
         shutil.copyfileobj(data, fout)
 
-    logger.info('Downloaded and saved file {0}'.format(file_name))
-    return file_name
+    datetime_stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+    file_name_with_date = 'MapiGushim{0}{1}'.format(datetime_stamp, '.zip')
+    os.rename(file_name, file_name_with_date)
+    logger.info('Downloaded and saved file {0}'.format(file_name_with_date ))
+    return file_name_with_date
