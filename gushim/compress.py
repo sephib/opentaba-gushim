@@ -14,7 +14,7 @@ class Config(object):
     COMPRESS = True
 
     # Resources
-    FOLDER_PATH = '/mnt/temp_general/systemoutputepop/'  # r'E:\SystemOutput01\EPop'
+    FOLDER_PATH = os.path.basename(__file__)
     DESTINATION_PATH = ''
 
     def __init__(self):
@@ -46,20 +46,6 @@ def gzip_uncompress(gz_file, folder_path, destination_path=None):
             raise
     logger.info('uncompressed {0}'.format(gz_file))
 
-def main(folder_path):
-    list_epop_files = []
-    if os.listdir(folder_path).__len__() > 0:
-        list_epop_files = [f for f in sorted(os.listdir(folder_path)) if
-                           os.path.isfile(os.path.join(folder_path, f)) and (f.endswith('.bin') or f.endswith('.gz'))]
-    if config.COMPRESS:
-        for original_file_name in list_epop_files:
-            if original_file_name[-4:] == '.bin':
-                gzip_compress(original_file_name, folder_path)
-    elif not config.COMPRESS:
-        for original_file_name in list_epop_files:
-            if original_file_name[-3:] == '.gz':
-                gzip_uncompress(original_file_name, folder_path)
-
 
 def zip_uncompress(filename, folder_path=None):
     logger = logging.getLogger(__name__)
@@ -70,5 +56,11 @@ def zip_uncompress(filename, folder_path=None):
     logger.info('Uncompressed file into {0}'.format(folder_path))
 
 
+def main(folder_path):
+    if not os.listdir(folder_path).__len__() > 0:
+        return FileNotFoundError
+
+
 if __name__ == '__main__':
-    main(config.FOLDER_PATH)
+    pass
+
