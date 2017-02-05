@@ -6,13 +6,15 @@ import requests
 import datetime
 
 
-
-
-def get_gushim(folder, url):
-    # url = 'http://consuming-python-services-api.azurewebsites.net/cats/random'
+def get_gushim(folder, url=None):
+    logger = logging.getLogger(__name__)
+    if not url:
+        logger.warning('Need URL to download file from ')
+        return FileNotFoundError
     data = get_data_from_url(url)
     name = 'file_download'
     file_name = save_file(folder, name, data)
+    logger.debug('Successfuly downloaded file: {0}'.format(file_name))
     return file_name
 
 
