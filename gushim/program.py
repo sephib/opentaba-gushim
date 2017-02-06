@@ -1,16 +1,26 @@
 import logging
 import logging.config
+import pandas as pd
+import geopandas as gp
+import numpy as np
+from shapely.geometry import Point, Polygon
+
 import os
 import sys
 import yaml
 
-
 sys.path.insert(0, 'opentaba-gushim-prj')
 import opentaba_gushim_prj.gushim.mapi_service as mapi
 import opentaba_gushim_prj.gushim.compress as compress
-import opentaba_gushim_prj.gushim.GeoUtils as GeoUtils
+import opentaba_gushim_prj.gushim.geo_utils as geo_utils
 
 gushim_url ='https://data.gov.il/dataset/3ef36ec6-f0e3-447b-bc9d-9ab4b3cee783/resource/f7a10a68-fba5-430b-ac11-970611904034/download/subgushall-nodes.zip'
+
+# CONFIG
+END_NODE_FILE = 'nodes.csv'
+END_ATTRIBUTE_FILE = 'attributes01.csv'
+YESHUV_MASK_FILE = r'support_data/Yeshuvim2015.csv'
+MIN_POPULATION = 2000
 
 
 def setup_logging(default_path='logging.yaml', default_level=logging.INFO, env_key='LOG_CFG'):
@@ -31,40 +41,128 @@ def setup_logging(default_path='logging.yaml', default_level=logging.INFO, env_k
     return logger
 
 
-def get_mapi_uncompress_node_file(folder_path, mapi_format: str):
+def get_mapi_uncompress_file(folder_path, mapi_format):
+    """
+    :param folder_path: Location of the unzip file
+    :param mapi_format: The file format of the gushim unzipped file - currently csv
+    :return: return filename
+    """
     for (dirpath, dirnames, filenames) in os.walk(folder_path):
-        csv_files = [os.path.join(dirpath, fi) for fi in filenames if fi.endswith(mapi_format)]
+        csv_files = [os.path.join(dirpath, fi) for fi in filenames if fi.endswith(mapi_format)][0]
     return csv_files
 
 
-def main():
-    logger = setup_logging(default_level=logging.DEBUG)
-    logger.info("Program started")
-
-    folder = get_or_create_workspace_folder()
-
-    file_name = mapi.get_gushim(folder, gushim_url)
-    # file_name = r'opentaba_gushim_prj/gushim/workspace/file_download.zip'
-    compress.zip_uncompress(file_name, folder)
-    csv_node_file = get_mapi_uncompress_node_file(folder, 'nodes.csv')
-
-    GeoUtils.csv_to_geojson(csv_node_file[0])
-
-    #Generate Topojson (reuse)
-    #Push to GIT
-
-
-
-def get_or_create_workspace_folder():
+def get_or_create_folder(folder_name):
     base_folder = os.path.abspath(os.path.dirname(__file__))
-    folder = 'workspace'
-    full_path = os.path.join(base_folder, folder)
+    if not folder_name:
+        folder_name = 'workspace'
+    full_path = os.path.join(base_folder, folder_name)
 
     if not os.path.exists(full_path) or not os.path.isdir(full_path):
         print('Creating new directory at {}'.format(full_path))
         os.mkdir(full_path)
 
     return full_path
+
+
+def main():
+    logger = setup_logging(default_level=logging.DEBUG)
+    logger.info("Program started")
+
+    workspace_folder = get_or_create_folder('workspace')
+    export_folder = get_or_create_folder('export')
+    logger.debug('The work folder is: {0}'.format(workspace_folder))
+
+
+    # Load Yeshuvim mask data into pandas
+    base_folder = os.path.abspath(os.path.dirname(__file__))
+    path_to_file = os.path.join(base_folder, YESHUV_MASK_FILE)
+    df_yeshuv = pd.read_csv(path_to_file,
+                         header=0,
+                         encoding='utf-8-sig'  # 'utf-8' ,index_col=['GUSH_NUM']
+                         , index_col=False
+                         )
+    logger.info('Successfully loaded yeshuv file {0} into pandas'.format(YESHUV_MASK_FILE))
+
+    # file_name = mapi.get_gushim(workspace_folder, gushim_url)  #include copy
+    # # file_name = r'opentaba_gushim_prj/gushim/workspace/file_download.zip'
+    # compress.zip_uncompress(file_name, workspace_folder)
+    # logger.debug('Successfully uncompressed file: {0}'.format(file_name))
+
+    # Load attribute data into geopandas
+    csv_att_file = get_mapi_uncompress_file(workspace_folder, END_ATTRIBUTE_FILE)
+    path_to_file = os.path.join(workspace_folder, csv_att_file)
+    df_att = pd.read_csv(path_to_file,
+                         # names=['GUSH_NUM','GUSH_SUFFI','SUB_GUSH_I','STATUS','STATUS_TEX','LOCALITY_I','LOCALITY_N','REG_MUN_ID','REG_MUN_NA','COUNTY_ID','COUNTY_NAM','REGION_ID','REGION_NAM','WP','IS_ANALITY','ANALITY_DA','SHAPE_Leng','SHAPE_Area','GUSH_TYPE','GUSHID'],
+                         header=0,
+                         # usecols = ['GUSH_NUM', ]
+                         # skiprows=1,
+                         encoding='utf-8-sig'  # 'utf-8' ,index_col=['GUSH_NUM']
+                         , index_col=False
+                         )
+    logger.info('Successfully loaded attribute file {0} into pandas'.format(csv_att_file))
+
+    # Join DataFrames
+    merged_mask = pd.merge(left=df_att, right=df_yeshuv, how='inner', left_on='LOCALITY_I', right_on='ID')
+
+    # Load node data into geopandas
+    csv_node_file = get_mapi_uncompress_file(workspace_folder, END_NODE_FILE)
+    # geojson_file = geo_utils.csv_to_geojson(csv_node_file[0])
+    # PATH = r"C:\Users\sephi\github\opentaba_gushim\opentaba_gushim_prj\gushim\workspace\subgushall-nodes"
+    path_to_file = os.path.join(workspace_folder, csv_node_file)
+    df_node = pd.read_csv(path_to_file
+                          , skiprows=1
+                          , names=['shapeid', 'x', 'y']
+                          , encoding='utf-8-sig'  # 'utf-8'
+                          #                      ,nrows=500
+                          )
+    logger.debug('Successfully loaded node file {0} into pandas'.format(csv_node_file))
+
+    df_node['geometry'] = df_node.apply(lambda x: (x['x'], x['y']), axis=1)
+    logger.debug('Successfully created  point object in dataframe {0} '.format(df_node))
+
+    df = df_node.groupby('shapeid')['geometry'].apply(lambda x: Polygon(x.tolist())).reset_index()
+    df_polygon = gp.GeoDataFrame(df, geometry='geometry')
+    logger.debug('Successfully created  Polygon in geopandas')
+
+    # Join DataFrames
+    merged_inner = pd.merge(left=merged_mask, right=df_polygon, how='inner', left_on='shapeid', right_on='shapeid')
+
+    # Create GeoDataFrame
+    df_polygon_att = gp.GeoDataFrame(merged_inner, geometry='geometry')
+    df_polygon_att.crs = {'init': 'epsg:2039'}  #define GeoDataFrame
+
+    df_polygon_att_wgs = df_polygon_att.to_crs({'init': 'epsg:4326'}).copy()
+    logger.info('Successfully projected file GeoDataframe to WGS84')
+
+    #Get list of localities
+    localities = df_polygon_att.groupby(['EngName']).size().index.tolist()
+
+    #export each locality as geojson
+    for local in localities:
+        if not df_polygon_att[(df_polygon_att.EngName == local) & (df_polygon_att.Pop2015 > MIN_POPULATION)].empty:
+            file_name_string = "".join(x for x in local if x.isalnum()).encode('utf-8')  #remove unsafe characters
+            try:
+                export_file = os.path.join(base_folder, export_folder, 'local{0}.geojson'.format(file_name_string))
+                with open(export_file, 'w') as f:
+                    f.write(df_polygon_att[(df_polygon_att.EngName == local) & (df_polygon_att.Pop2015 > MIN_POPULATION)].to_json())
+            except:
+                logger.warning('failed to save geojson for: {0}'.format(local))
+    logger.debug('Finished to saved files to GeoJSON')
+
+    # TODO Convert to TopoJSON
+
+
+    # geojson_file = r'C:\Users\sephi\github\opentaba_gushim\opentaba_gushim_prj\gushim\workspace\subgushall-nodes\countries.geo.json'
+    # geojson_file = r'C:\Users\sephi\github\opentaba_gushim\opentaba_gushim_prj\gushim\workspace\abugosh.geoson'
+    # topojson_file = os.path.join(os.path.dirname(geojson_file), os.path.basename(geojson_file) + '.topojson')
+    # geo_utils.geoson_to_topojson(geojson_file, topojson_file)
+
+    #Generate Topojson (reuse)
+    #Push to GIT
+    logger.info("Program completed")
+
+
 
 
 
