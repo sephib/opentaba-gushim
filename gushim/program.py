@@ -3,16 +3,17 @@ import logging.config
 import pandas as pd
 import geopandas as gp
 import numpy as np
-from shapely.geometry import Point, Polygon
-
+from shapely.geometry import Point, Polygon, LineString
+import time
 import os
 import sys
 import yaml
 
 sys.path.insert(0, 'opentaba-gushim-prj')
-import opentaba_gushim_prj.gushim.mapi_service as mapi
-import opentaba_gushim_prj.gushim.compress as compress
-import opentaba_gushim_prj.gushim.geo_utils as geo_utils
+import gushim.mapi_service as mapi
+import gushim.compress as compress
+import gushim.geo_utils as geo_utils
+import gushim.utilities as util
 
 gushim_url ='https://data.gov.il/dataset/3ef36ec6-f0e3-447b-bc9d-9ab4b3cee783/resource/f7a10a68-fba5-430b-ac11-970611904034/download/subgushall-nodes.zip'
 
@@ -21,6 +22,7 @@ END_NODE_FILE = 'nodes.csv'
 END_ATTRIBUTE_FILE = 'attributes01.csv'
 YESHUV_MASK_FILE = r'support_data/Yeshuvim2015.csv'
 MIN_POPULATION = 2000
+SAVE_GUSHIM_SHAPEFILE = True  #save the gushim to shapefile
 
 
 def setup_logging(default_path='logging.yaml', default_level=logging.INFO, env_key='LOG_CFG'):
@@ -114,25 +116,29 @@ def main():
                           , skiprows=1
                           , names=['shapeid', 'x', 'y']
                           , encoding='utf-8-sig'  # 'utf-8'
-                          #                      ,nrows=500
+                          # , nrows=50000
                           )
-    logger.debug('Successfully loaded node file {0} into pandas'.format(csv_node_file))
+    logger.info('Successfully loaded node file {0} into pandas'.format(csv_node_file))
 
     df_node['geometry'] = df_node.apply(lambda x: (x['x'], x['y']), axis=1)
-    logger.debug('Successfully created  point object in dataframe {0} '.format(df_node))
+    logger.info('Successfully created  point object in dataframe ')
 
     df = df_node.groupby('shapeid')['geometry'].apply(lambda x: Polygon(x.tolist())).reset_index()
+    # df_node['geometry'] = df_node.groupby('shapeid').apply(lambda x: Polygon(x.tolist([Point(xy) for xy in zip(x.x, x.y)]))).reset_index()
+
     df_polygon = gp.GeoDataFrame(df, geometry='geometry')
-    logger.debug('Successfully created  Polygon in geopandas')
+    df_polygon.crs = {'init': 'epsg:2039'}
 
     # Join DataFrames
     merged_inner = pd.merge(left=merged_mask, right=df_polygon, how='inner', left_on='shapeid', right_on='shapeid')
+    logger.debug('Successfully merged dataframe')
+    logger.debug(type(merged_inner))
 
-    # Create GeoDataFrame
+    # Create GeoDataFrame polygon
     df_polygon_att = gp.GeoDataFrame(merged_inner, geometry='geometry')
     df_polygon_att.crs = {'init': 'epsg:2039'}  #define GeoDataFrame
-
-    df_polygon_att_wgs = df_polygon_att.to_crs({'init': 'epsg:4326'}).copy()
+    logger.debug('Successfully created GeoDataframe ITM')
+    df_polygon_att_wgs = df_polygon_att.to_crs({'init': 'epsg:4326'}).copy() #world = world.to_crs({'init': 'epsg:3395'})
     logger.info('Successfully projected file GeoDataframe to WGS84')
 
     #Get list of localities
@@ -140,18 +146,27 @@ def main():
 
     #export each locality as geojson
     for local in localities:
-        if not df_polygon_att[(df_polygon_att.EngName == local) & (df_polygon_att.Pop2015 > MIN_POPULATION)].empty:
+        df_local = df_polygon_att_wgs[(df_polygon_att_wgs.EngName == local) & (df_polygon_att_wgs.Pop2015 > MIN_POPULATION)]
+        if not df_local.empty:
             file_name_string = "".join(x for x in local if x.isalnum()).encode('utf-8')  #remove unsafe characters
             try:
-                export_file = os.path.join(base_folder, export_folder, 'local{0}.geojson'.format(file_name_string))
+                export_file = os.path.join(base_folder, export_folder, 'local_{0}.geojson'.format(file_name_string))
                 with open(export_file, 'w') as f:
-                    f.write(df_polygon_att[(df_polygon_att.EngName == local) & (df_polygon_att.Pop2015 > MIN_POPULATION)].to_json())
+                    f.write(df_local.to_json())
             except:
                 logger.warning('failed to save geojson for: {0}'.format(local))
     logger.debug('Finished to saved files to GeoJSON')
 
     # TODO Convert to TopoJSON
 
+    # TODO convert to function taking dfpg and crs
+
+    if SAVE_GUSHIM_SHAPEFILE == True:
+        timestr = time.strftime("%Y%m%d_%H%M%S")
+        export_file = os.path.join(base_folder, export_folder, 'Gushim{0}.shp'.format(timestr))
+        df_polygon_att_wgs.to_file(export_file)
+        logger.info('Successfully saved shapefile {0}'.format(export_file))
+    logger.info('Successfully  created  Polygon in geopandas')
 
     # geojson_file = r'C:\Users\sephi\github\opentaba_gushim\opentaba_gushim_prj\gushim\workspace\subgushall-nodes\countries.geo.json'
     # geojson_file = r'C:\Users\sephi\github\opentaba_gushim\opentaba_gushim_prj\gushim\workspace\abugosh.geoson'
