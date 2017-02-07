@@ -13,7 +13,7 @@ sys.path.insert(0, 'opentaba-gushim-prj')
 import gushim.mapi_service as mapi
 import gushim.compress as compress
 import gushim.geo_utils as geo_utils
-import gushim.utilities as util
+# import gushim.utilities as util
 
 gushim_url ='https://data.gov.il/dataset/3ef36ec6-f0e3-447b-bc9d-9ab4b3cee783/resource/f7a10a68-fba5-430b-ac11-970611904034/download/subgushall-nodes.zip'
 
