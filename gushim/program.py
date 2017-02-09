@@ -192,10 +192,9 @@ def main():
     #Generate Topojson (reuse)
 
     # Log Statistics
-    logger.info('Number of Localities to be exported is {}'.format())
-    logger.info('Number of Gushim / Polygons that are in to be s {}'.format())
-    logger.info('Number of Localities to be exported is {}'.format())
-    logger.info('Number of Localities to be exported is {}'.format())
+    logger.info('Number of Localities to be exported is {0}'.format(len(localities)))
+    logger.info('Number of Gushim / Polygons that have been exported {0}'.format(len(df_polygon_att_wgs.shapeid)))
+    logger.debug('Number of Gushim per Localitis is {0}'.format(df_polygon_att_wgs.groupby(['HebName'])['GUSH_NUM'].size()))
 
     # TODO Push to GIT
 
