@@ -23,7 +23,9 @@ END_ATTRIBUTE_FILE = 'attributes01.csv'
 YESHUV_MASK_FILE = r'support_data/Yeshuvim2015.csv'
 MIN_POPULATION = 2000
 SAVE_GUSHIM_SHAPEFILE = True  #save the gushim to shapefile
-
+EXPORT_TO_GEOJSON = False
+EXPORT_TO_TOPOJSON = True  #Save also to TopoJSON
+DELETE_GEOJSON = True
 
 def setup_logging(default_path='logging.yaml', default_level=logging.INFO, env_key='LOG_CFG'):
     """
@@ -151,8 +153,22 @@ def main():
             file_name_string = "".join(x for x in local if x.isalnum()).encode('utf-8')  #remove unsafe characters
             try:
                 export_file = os.path.join(base_folder, export_folder, 'local_{0}.geojson'.format(file_name_string))
-                with open(export_file, 'w') as f:
-                    f.write(df_local.to_json())
+                local_geojson = df_local.to_json()
+                if EXPORT_TO_GEOJSON:
+                    with open(export_file, 'w') as f:
+                        f.write(local_geojson)
+                if EXPORT_TO_TOPOJSON:
+                    if not os.path.exists(export_file) or not os.path.isdir(export_file):
+                        with open(export_file, 'w') as f:
+                            f.write(local_geojson)
+                    filename, _ = os.path.splitext(export_file)
+                    topojson_file = filename + '.topojson'
+                    geo_utils.geoson_to_topojson(export_file, topojson_file)
+                if DELETE_GEOJSON:
+                    try:
+                        os.remove(export_file)
+                    except OSError, e:
+                        print ("Error: {} - {}.".format(e.export_file, e.strerror))
             except:
                 logger.warning('failed to save geojson for: {0}'.format(local))
     logger.debug('Finished to saved files to GeoJSON')
@@ -161,20 +177,27 @@ def main():
 
     # TODO convert to function taking dfpg and crs
 
-    if SAVE_GUSHIM_SHAPEFILE == True:
+    if SAVE_GUSHIM_SHAPEFILE:
         timestr = time.strftime("%Y%m%d_%H%M%S")
         export_file = os.path.join(base_folder, export_folder, 'Gushim{0}.shp'.format(timestr))
         df_polygon_att_wgs.to_file(export_file)
         logger.info('Successfully saved shapefile {0}'.format(export_file))
+
+
     logger.info('Successfully  created  Polygon in geopandas')
 
     # geojson_file = r'C:\Users\sephi\github\opentaba_gushim\opentaba_gushim_prj\gushim\workspace\subgushall-nodes\countries.geo.json'
     # geojson_file = r'C:\Users\sephi\github\opentaba_gushim\opentaba_gushim_prj\gushim\workspace\abugosh.geoson'
-    # topojson_file = os.path.join(os.path.dirname(geojson_file), os.path.basename(geojson_file) + '.topojson')
-    # geo_utils.geoson_to_topojson(geojson_file, topojson_file)
-
+    #
     #Generate Topojson (reuse)
-    #Push to GIT
+
+    # Log Statistics
+    logger.info('Number of Localities to be exported is {0}'.format(len(localities)))
+    logger.info('Number of Gushim / Polygons that have been exported {0}'.format(len(df_polygon_att_wgs.shapeid)))
+    logger.debug('Number of Gushim per Localitis is {0}'.format(df_polygon_att_wgs.groupby(['HebName'])['GUSH_NUM'].size()))
+
+    # TODO Push to GIT
+
     logger.info("Program completed")
 
 
