@@ -25,6 +25,7 @@ MIN_POPULATION = 2000
 SAVE_GUSHIM_SHAPEFILE = True  #save the gushim to shapefile
 EXPORT_TO_GEOJSON = False
 EXPORT_TO_TOPOJSON = True  #Save also to TopoJSON
+EXPORT_ALL_GUSHIM = True
 DELETE_GEOJSON = True
 WORKSPACE_FOLDER = 'workspace'
 EXPORT_FOLDER = 'export'
@@ -137,15 +138,15 @@ def main():
     for local in localities:
         df_local = df_polygon_att_wgs[(df_polygon_att_wgs.EngName == local) & (df_polygon_att_wgs.Pop2015 > MIN_POPULATION)]
         if not df_local.empty:
-            file_name_string = "".join(x for x in local if x.isalnum()).encode('utf-8')  #remove unsafe characters
+            file_name_string = "".join(x for x in local if x.isalnum()).encode('utf-8').lower()  #remove unsafe characters
             try:
-                export_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format(file_name_string.lower()))
+                export_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format(file_name_string))
                 local_geojson = df_local.to_json()
                 if EXPORT_TO_GEOJSON:
                     with open(export_file, 'w') as f:
                         f.write(local_geojson)
                 if EXPORT_TO_TOPOJSON:
-                    export_geojson_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format(file_name_string.lower()))
+                    export_geojson_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format(file_name_string))
                     df_local.rename(columns={'GUSH_NUM': 'name'}, inplace=True)
                     local_topojson = df_local['name'].to_json()
                     # if not os.path.exists(export_file) or not os.path.isdir(export_file):
@@ -167,6 +168,15 @@ def main():
                 print ("Error: {} - {}.".format(e.message, e.strerror))
                 logger.warning('failed to save geojson for: {0}'.format(local))
     logger.debug('Finished to saved files to GeoJSON')
+
+    if EXPORT_ALL_GUSHIM:
+        all_gushim_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format('israel_gushim'))
+        all_local_json = df_polygon_att_wgs.to_json()
+        with open(all_gushim_file, 'w') as f:
+            f.write(all_local_json)
+        filename, _ = os.path.splitext(all_gushim_file)
+        topojson_file = filename + '.topojson'
+        geo_utils.geoson_to_topojson(all_gushim_file, topojson_file)
 
     # TODO convert to function taking dfpg and crs
 
