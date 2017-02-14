@@ -139,24 +139,32 @@ def main():
         if not df_local.empty:
             file_name_string = "".join(x for x in local if x.isalnum()).encode('utf-8')  #remove unsafe characters
             try:
-                export_file = os.path.join(base_folder, export_folder, 'local_{0}.geojson'.format(file_name_string))
+                export_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format(file_name_string.lower()))
                 local_geojson = df_local.to_json()
                 if EXPORT_TO_GEOJSON:
                     with open(export_file, 'w') as f:
                         f.write(local_geojson)
                 if EXPORT_TO_TOPOJSON:
-                    if not os.path.exists(export_file) or not os.path.isdir(export_file):
-                        with open(export_file, 'w') as f:
-                            f.write(local_geojson)
-                    filename, _ = os.path.splitext(export_file)
+                    export_geojson_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format(file_name_string.lower()))
+                    df_local.rename(columns={'GUSH_NUM': 'name'}, inplace=True)
+                    local_topojson = df_local['name'].to_json()
+                    # if not os.path.exists(export_file) or not os.path.isdir(export_file):
+                    with open(export_geojson_file, 'w') as f:
+                        f.write(local_topojson)
+                    filename, _ = os.path.splitext(export_geojson_file)
                     topojson_file = filename + '.topojson'
-                    geo_utils.geoson_to_topojson(export_file, topojson_file)
+                    geo_utils.geoson_to_topojson(export_geojson_file, topojson_file)
+                    try:
+                        os.remove(export_geojson_file)
+                    except OSError, e:
+                        print ("Error: {} - {}.".format(e.message, e.strerror))
                 if DELETE_GEOJSON:
                     try:
                         os.remove(export_file)
                     except OSError, e:
                         print ("Error: {} - {}.".format(e.message, e.strerror))
-            except:
+            except OSError, e:
+                print ("Error: {} - {}.".format(e.message, e.strerror))
                 logger.warning('failed to save geojson for: {0}'.format(local))
     logger.debug('Finished to saved files to GeoJSON')
 
