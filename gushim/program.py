@@ -83,9 +83,10 @@ def main():
     export_folder = get_or_create_folder(EXPORT_FOLDER)
     logger.debug('The workspace folder is: {0}'.format(workspace_folder))
 
+    base_folder = os.path.abspath(os.path.dirname(__file__))
+
     if not LOAD_SHAPEFILE:
         # Load Yeshuvim mask data into pandas
-        base_folder = os.path.abspath(os.path.dirname(__file__))
         path_to_file = os.path.join(base_folder, YESHUV_MASK_FILE)
         df_yeshuv = pd.read_csv(path_to_file, header=0, encoding='utf-8-sig', index_col=False)
         logger.info('Successfully loaded yeshuv file {0} into pandas'.format(YESHUV_MASK_FILE))
@@ -161,8 +162,8 @@ def main():
                     # if not os.path.exists(export_file) or not os.path.isdir(export_file):
                     with open(export_temp_geojson_file, 'w') as f:
                         f.write(local_topojson)
-                    filename, _ = os.path.splitext(export_temp_geojson_file)
-                    topojson_file = filename + '.topojson'
+                    # filename, _ = os.path.splitext(export_temp_geojson_file)
+                    topojson_file = '{}.topojson'.format(file_name_string)
                     print("Geojson: {}, Topojson: {} ".format(export_temp_geojson_file, topojson_file))
                     geo_utils.geoson_to_topojson(export_temp_geojson_file, topojson_file)
                     try:
