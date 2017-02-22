@@ -22,11 +22,10 @@ END_NODE_FILE = 'nodes.csv'
 END_ATTRIBUTE_FILE = 'attributes01.csv'
 YESHUV_MASK_FILE = r'support_data/Yeshuvim2015.csv'
 MIN_POPULATION = 2000
-SAVE_GUSHIM_SHAPEFILE = True  #save the gushim to shapefile
-EXPORT_TO_GEOJSON = True
-EXPORT_TO_TOPOJSON = True  #Save also to TopoJSON
-EXPORT_ALL_GUSHIM = True
-DELETE_GEOJSON = False
+SAVE_GUSHIM_SHAPEFILE = False  # Save the gushim to shapefile
+EXPORT_TO_GEOJSON = False
+EXPORT_TO_TOPOJSON = True  # Save to TopoJSON
+EXPORT_ALL_GUSHIM = False
 WORKSPACE_FOLDER = 'workspace'
 EXPORT_FOLDER = 'export'
 LOAD_SHAPEFILE = True
@@ -141,47 +140,42 @@ def main():
 
     # Get list of localities
     localities = df_polygon_att_wgs.groupby(['EngName']).size().index.tolist()
+    # Prepare dataframe with relevant topojson column
+    df_polygon_att_wgs['Name'] = df_polygon_att_wgs['GUSH_NUM']  # df_local.rename(columns={'GUSH_NUM': 'name'}, inplace=True)
 
     # export each locality as geojson
     for local in localities:
         df_local = df_polygon_att_wgs[(df_polygon_att_wgs.EngName == local) & (df_polygon_att_wgs.Pop2015 > MIN_POPULATION)]
         if not df_local.empty:
             file_name_string = "".join(x for x in local if x.isalnum()).encode('utf-8').upper()  #remove unsafe characters
-            print (file_name_string)
             try:
                 export_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format(file_name_string))
-                local_geojson = df_local.to_json()
                 if EXPORT_TO_GEOJSON:
+                    local_geojson = df_local.to_json()
                     with open(export_file, 'w') as f:
                         f.write(local_geojson)
                 if EXPORT_TO_TOPOJSON:
-                    export_temp_geojson_file = os.path.join(base_folder, export_folder, 'topo4{0}.geojson'.format(file_name_string))
-                    df_local.rename(columns={'GUSH_NUM': 'name'}, inplace=True)
-                    # local_topojson = df_local['name'].to_json()
-                    local_topojson = df_local.to_json()
+                    export_temp_geojson_file = os.path.join(base_folder, export_folder, 'temp_json4{0}.geojson'.format(file_name_string))
+                    local_geojson = df_local[['Name', 'geometry']].to_json()  # local_topojson = df_local.to_json()
                     # if not os.path.exists(export_file) or not os.path.isdir(export_file):
                     with open(export_temp_geojson_file, 'w') as f:
-                        f.write(local_topojson)
+                        f.write(local_geojson)
                     # filename, _ = os.path.splitext(export_temp_geojson_file)
-                    topojson_file = '{}.topojson'.format(file_name_string)
-                    print("Geojson: {}, Topojson: {} ".format(export_temp_geojson_file, topojson_file))
+                    topojson_file = os.path.join(base_folder, export_folder, '{0}.topojson'.format(file_name_string))
                     geo_utils.geoson_to_topojson(export_temp_geojson_file, topojson_file)
                     try:
                         os.remove(export_temp_geojson_file)
+                        logger.debug('Successfully deleted temp_geojson file: {0}'.format(export_temp_geojson_file))
                     except OSError, e:
                         print ("Error: {} - {}.".format(e.message, e.strerror))
-                if DELETE_GEOJSON:
-                    try:
-                        os.remove(export_file)
-                    except OSError, e:
-                        print ("Error: {} - {}.".format(e.message, e.strerror))
+
             except OSError, e:
                 print ("Error: {} - {}.".format(e.message, e.strerror))
                 logger.warning('failed to save geojson for: {0}'.format(local))
     logger.debug('Finished to saved files to GeoJSON')
 
     if EXPORT_ALL_GUSHIM:
-        all_gushim_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format('israel_gushim'))
+        all_gushim_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format('ISRAEL_GUSHIM'))
         all_local_json = df_polygon_att_wgs.to_json()
         with open(all_gushim_file, 'w') as f:
             f.write(all_local_json)

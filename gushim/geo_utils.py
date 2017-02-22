@@ -58,11 +58,11 @@ def geoson_to_topojson(in_path, out_path, quantization=1e6, simplify=0.0001):
 
     # give it a path in and out
     try:
-        topojson(in_path, out_path, quantization=1e6, simplify=0.0001)
+        topojson(in_path, out_path, quantization, simplify)
+        logger.debug('Converted geojson into {0}'.format(out_path))
     except:
         raise
 
-    logger.info('Converted geojson into {0}'.format(out_path))
 
 
 # def load_csv_into_json(full_path_file_name):
