@@ -8,6 +8,7 @@ import time
 import os
 import sys
 import yaml
+from io import open as io_open
 
 sys.path.insert(0, 'opentaba-gushim-prj')
 import gushim.mapi_service as mapi
@@ -21,14 +22,15 @@ gushim_url ='https://data.gov.il/dataset/3ef36ec6-f0e3-447b-bc9d-9ab4b3cee783/re
 END_NODE_FILE = 'nodes.csv'
 END_ATTRIBUTE_FILE = 'attributes01.csv'
 YESHUV_MASK_FILE = r'support_data/Yeshuvim2015.csv'
-MIN_POPULATION = 2000
-SAVE_GUSHIM_SHAPEFILE = False  # Save the gushim to shapefile
-EXPORT_TO_GEOJSON = False
-EXPORT_TO_TOPOJSON = True  # Save to TopoJSON
-EXPORT_ALL_GUSHIM = False
 WORKSPACE_FOLDER = 'workspace'
 EXPORT_FOLDER = 'export'
+MIN_POPULATION = 2000
 LOAD_SHAPEFILE = True
+SAVE_GUSHIM_SHAPEFILE = False  # Save the gushim to shapefile
+EXPORT_TO_GEOJSON = True
+EXPORT_TO_TOPOJSON = True  # Save to TopoJSON
+EXPORT_ALL_GUSHIM = False
+
 
 
 def setup_logging(default_path='logging.yaml', default_level=logging.INFO, env_key='LOG_CFG'):
@@ -55,13 +57,16 @@ def get_mapi_uncompress_file(folder_path, mapi_format):
     :param mapi_format: The file format of the gushim unzipped file - currently csv
     :return: return filename
     """
-    for (dirpath, dirnames, filenames) in os.walk(folder_path):
-        csv_files = [os.path.join(dirpath, fi) for fi in filenames if fi.endswith(mapi_format)][0]
-
+    for (dir_path, dir_names, file_names) in os.walk(folder_path):
+        csv_files = [os.path.join(dir_path, fi) for fi in file_names if fi.endswith(mapi_format)][0]
     return csv_files
 
 
 def get_or_create_folder(folder_name):
+    """
+    :param folder_name:
+    :return:
+    """
     base_folder = os.path.abspath(os.path.dirname(__file__))
     if not folder_name:
         folder_name = 'workspace'
@@ -76,6 +81,7 @@ def get_or_create_folder(folder_name):
 
 def main():
     logger = setup_logging(default_level=logging.DEBUG)
+
     logger.info("Program started")
 
     workspace_folder = get_or_create_folder(WORKSPACE_FOLDER)
@@ -134,9 +140,15 @@ def main():
         df_polygon_att_wgs = df_polygon_att.to_crs({'init': 'epsg:4326'}).copy()
         logger.info('Successfully projected file GeoDataframe to WGS84')
     else:
-        shapefile_path = r'C:\Users\sephi\github\opentaba_gushim\opentaba_gushim_prj\gushim\export\Gushim20170209_173107.shp'
+        shapefile_path = r'C:\Users\sephi\github\opentaba_gushim\opentaba_gushim_prj\gushim\export\Gushim20170222_110536.shp'
         df_polygon_att_wgs = gp.read_file(shapefile_path)
         logger.info('Shapefile {} loaded into GeoPandas'.format(shapefile_path ))
+
+    if SAVE_GUSHIM_SHAPEFILE:
+        timestr = time.strftime("%Y%m%d_%H%M%S")
+        export_file = os.path.join(base_folder, export_folder, 'Gushim{0}.shp'.format(timestr))
+        df_polygon_att_wgs.to_file(export_file, encoding="utf-8")
+        logger.info('Successfully saved shapefile {0}'.format(export_file))
 
     # Get list of localities
     localities = df_polygon_att_wgs.groupby(['EngName']).size().index.tolist()
@@ -152,8 +164,10 @@ def main():
                 export_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format(file_name_string))
                 if EXPORT_TO_GEOJSON:
                     local_geojson = df_local.to_json()
-                    with open(export_file, 'w') as f:
-                        f.write(local_geojson)
+                    with io_open(export_file, 'w', encoding='utf-8') as f:
+                        f.write(unicode(local_geojson))
+                    # with io_open(export_file, 'w', encoding='utf-8') as f:
+                    #     df_local.to_json(f, force_ascii=False)
                 if EXPORT_TO_TOPOJSON:
                     export_temp_geojson_file = os.path.join(base_folder, export_folder, 'temp_json4{0}.geojson'.format(file_name_string))
                     local_geojson = df_local[['Name', 'geometry']].to_json()  # local_topojson = df_local.to_json()
@@ -185,11 +199,7 @@ def main():
 
     # TODO convert to function taking dfpg and crs
 
-    if SAVE_GUSHIM_SHAPEFILE:
-        timestr = time.strftime("%Y%m%d_%H%M%S")
-        export_file = os.path.join(base_folder, export_folder, 'Gushim{0}.shp'.format(timestr))
-        df_polygon_att_wgs.to_file(export_file)
-        logger.info('Successfully saved shapefile {0}'.format(export_file))
+
 
 
     logger.info('Successfully  created  Polygon in geopandas')
