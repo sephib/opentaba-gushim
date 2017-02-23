@@ -14,7 +14,7 @@ sys.path.insert(0, 'opentaba-gushim-prj')
 import gushim.mapi_service as mapi
 import gushim.compress as compress
 import gushim.geo_utils as geo_utils
-import gushim.utilities as util
+# import gushim.utilities as util
 
 gushim_url ='https://data.gov.il/dataset/3ef36ec6-f0e3-447b-bc9d-9ab4b3cee783/resource/f7a10a68-fba5-430b-ac11-970611904034/download/subgushall-nodes.zip'
 
@@ -30,8 +30,6 @@ SAVE_GUSHIM_SHAPEFILE = False  # Save the gushim to shapefile
 EXPORT_TO_GEOJSON = True
 EXPORT_TO_TOPOJSON = True  # Save to TopoJSON
 EXPORT_ALL_GUSHIM = False
-
-
 
 def setup_logging(default_path='logging.yaml', default_level=logging.INFO, env_key='LOG_CFG'):
     """
@@ -161,6 +159,7 @@ def main():
         if not df_local.empty:
             file_name_string = "".join(x for x in local if x.isalnum()).encode('utf-8').upper()  #remove unsafe characters
             try:
+
                 export_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format(file_name_string))
                 if EXPORT_TO_GEOJSON:
                     local_geojson = df_local.to_json()
@@ -185,6 +184,8 @@ def main():
 
             except OSError, e:
                 print ("Error: {} - {}.".format(e.message, e.strerror))
+
+
                 logger.warning('failed to save geojson for: {0}'.format(local))
     logger.debug('Finished to saved files to GeoJSON')
 
@@ -198,7 +199,6 @@ def main():
         geo_utils.geoson_to_topojson(all_gushim_file, topojson_file)
 
     # TODO convert to function taking dfpg and crs
-
 
 
 
