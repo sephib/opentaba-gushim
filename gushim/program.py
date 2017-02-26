@@ -1,3 +1,4 @@
+import datetime
 import logging
 import logging.config
 import pandas as pd
@@ -9,6 +10,8 @@ import os
 import sys
 import yaml
 from io import open as io_open
+from git import Repo
+
 
 sys.path.insert(0, 'opentaba-gushim-prj')
 import gushim.mapi_service as mapi
@@ -30,6 +33,9 @@ SAVE_GUSHIM_SHAPEFILE = False  # Save the gushim to shapefile
 EXPORT_TO_GEOJSON = True
 EXPORT_TO_TOPOJSON = True  # Save to TopoJSON
 EXPORT_ALL_GUSHIM = False
+REPO_DIR = '../'
+
+
 
 def setup_logging(default_path='logging.yaml', default_level=logging.INFO, env_key='LOG_CFG'):
     """
@@ -79,6 +85,7 @@ def get_or_create_folder(folder_name):
 
 def main():
     logger = setup_logging(default_level=logging.DEBUG)
+    datetime_str = datetime.datetime.utcnow().strftime('%Y%m%d%H%M')
 
     logger.info("Program started")
 
@@ -143,8 +150,8 @@ def main():
         logger.info('Shapefile {} loaded into GeoPandas'.format(shapefile_path ))
 
     if SAVE_GUSHIM_SHAPEFILE:
-        timestr = time.strftime("%Y%m%d_%H%M%S")
-        export_file = os.path.join(base_folder, export_folder, 'Gushim{0}.shp'.format(timestr))
+        # timestr = time.strftime("%Y%m%d_%H%M%S")
+        export_file = os.path.join(base_folder, export_folder, 'Gushim{0}.shp'.format(datetime_str))
         df_polygon_att_wgs.to_file(export_file, encoding="utf-8")
         logger.info('Successfully saved shapefile {0}'.format(export_file))
 
@@ -152,6 +159,7 @@ def main():
     localities = df_polygon_att_wgs.groupby(['EngName']).size().index.tolist()
     # Prepare dataframe with relevant topojson column
     df_polygon_att_wgs['Name'] = df_polygon_att_wgs['GUSH_NUM']  # df_local.rename(columns={'GUSH_NUM': 'name'}, inplace=True)
+
 
     # export each locality as geojson
     for local in localities:
@@ -215,6 +223,16 @@ def main():
     logger.debug('Number of Gushim per Localitis is {0}'.format(df_polygon_att_wgs.groupby(['HebName'])['GUSH_NUM'].size()))
 
     # TODO Push to GIT
+
+    repo = Repo(REPO_DIR)
+    assert not repo.bare
+    new_branch = repo.create_head(datetime_str)  # create a new branch ...
+    assert repo.active_branch != new_branch  # which wasn't checked out yet ...
+    self.assertEqual(new_branch.commit, repo.active_branch.commit)  # pointing to the checked-out commit
+
+    # It's easy to let a branch point to the previous commit, without affecting anything else
+    # Each reference provides access to the git object it points to, usually commits
+    assert new_branch.set_commit('HEAD~1').commit == repo.active_branch.commit.parents[0]
 
     logger.info("Program completed")
 
