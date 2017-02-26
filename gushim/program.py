@@ -157,7 +157,7 @@ def main():
     for local in localities:
         df_local = df_polygon_att_wgs[(df_polygon_att_wgs.EngName == local) & (df_polygon_att_wgs.Pop2015 > MIN_POPULATION)]
         if not df_local.empty:
-            file_name_string = "".join(x for x in local if x.isalnum()).encode('utf-8').upper()  #remove unsafe characters
+            file_name_string = "".join(x for x in local if x.isalnum()).encode('utf-8').lower()  #remove unsafe characters
             try:
 
                 export_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format(file_name_string))
