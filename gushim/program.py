@@ -1,3 +1,4 @@
+import datetime
 import logging
 import logging.config
 import pandas as pd
@@ -9,6 +10,8 @@ import os
 import sys
 import yaml
 from io import open as io_open
+from git import Repo
+
 
 sys.path.insert(0, 'opentaba-gushim-prj')
 import gushim.mapi_service as mapi
@@ -26,10 +29,17 @@ WORKSPACE_FOLDER = 'workspace'
 EXPORT_FOLDER = 'export'
 MIN_POPULATION = 2000
 LOAD_SHAPEFILE = True
+SHAPEFILE_PATH = r'./export/SubGushim20170222_110536.shp'
 SAVE_GUSHIM_SHAPEFILE = False  # Save the gushim to shapefile
-EXPORT_TO_GEOJSON = True
+EXPORT_TO_GEOJSON = False
 EXPORT_TO_TOPOJSON = True  # Save to TopoJSON
 EXPORT_ALL_GUSHIM = False
+REPO_DIR = '../'
+NEW_BRANCH = False
+PUSH_TO_GITHUB = True
+
+
+
 
 def setup_logging(default_path='logging.yaml', default_level=logging.INFO, env_key='LOG_CFG'):
     """
@@ -79,6 +89,7 @@ def get_or_create_folder(folder_name):
 
 def main():
     logger = setup_logging(default_level=logging.DEBUG)
+    datetime_str = datetime.datetime.utcnow().strftime('%Y%m%d_%H%M')
 
     logger.info("Program started")
 
@@ -87,6 +98,10 @@ def main():
     logger.debug('The workspace folder is: {0}'.format(workspace_folder))
 
     base_folder = os.path.abspath(os.path.dirname(__file__))
+    repo = Repo(REPO_DIR)
+    if NEW_BRANCH:
+        origin = repo.create_remote(datetime_str, repo.remotes.origin.url)
+        repo.create_head(datetime_str, origin.refs.master)
 
     if not LOAD_SHAPEFILE:
         # Load Yeshuvim mask data into pandas
@@ -138,13 +153,12 @@ def main():
         df_polygon_att_wgs = df_polygon_att.to_crs({'init': 'epsg:4326'}).copy()
         logger.info('Successfully projected file GeoDataframe to WGS84')
     else:
-        shapefile_path = r'C:\Users\sephi\github\opentaba_gushim\opentaba_gushim_prj\gushim\export\Gushim20170222_110536.shp'
-        df_polygon_att_wgs = gp.read_file(shapefile_path)
-        logger.info('Shapefile {} loaded into GeoPandas'.format(shapefile_path ))
+        df_polygon_att_wgs = gp.read_file(SHAPEFILE_PATH)
+        logger.info('Shapefile {} loaded into GeoPandas'.format(SHAPEFILE_PATH))
 
     if SAVE_GUSHIM_SHAPEFILE:
-        timestr = time.strftime("%Y%m%d_%H%M%S")
-        export_file = os.path.join(base_folder, export_folder, 'Gushim{0}.shp'.format(timestr))
+        # timestr = time.strftime("%Y%m%d_%H%M%S")
+        export_file = os.path.join(base_folder, export_folder, 'Gushim{0}.shp'.format(datetime_str))
         df_polygon_att_wgs.to_file(export_file, encoding="utf-8")
         logger.info('Successfully saved shapefile {0}'.format(export_file))
 
@@ -152,6 +166,7 @@ def main():
     localities = df_polygon_att_wgs.groupby(['EngName']).size().index.tolist()
     # Prepare dataframe with relevant topojson column
     df_polygon_att_wgs['Name'] = df_polygon_att_wgs['GUSH_NUM']  # df_local.rename(columns={'GUSH_NUM': 'name'}, inplace=True)
+
 
     # export each locality as geojson
     for local in localities:
@@ -215,6 +230,16 @@ def main():
     logger.debug('Number of Gushim per Localitis is {0}'.format(df_polygon_att_wgs.groupby(['HebName'])['GUSH_NUM'].size()))
 
     # TODO Push to GIT
+    if PUSH_TO_GITHUB:
+        repo = Repo(REPO_DIR)
+        topojson_files = [i for i in repo.untracked_files if i.endswith('topojson')]
+        repo.index.add(topojson_files)
+        repo.index.commit('Files created on {0}'.format(datetime_str))
+        remote_origin = repo.remote('origin')
+        remote_origin.push(repo.active_branch.name)
+        logger.info('Files where pushed to GitHub repo')
+        logger.debug('The following files were pushed to the repo {0}'.format(topojson_files))
+
 
     logger.info("Program completed")
 
