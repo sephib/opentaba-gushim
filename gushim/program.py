@@ -211,6 +211,7 @@ def main():
         filename, _ = os.path.splitext(all_gushim_file)
         topojson_file = filename + '.topojson'
         geo_utils.geoson_to_topojson(all_gushim_file, topojson_file)
+        # TODO zip geojson file and delete the original geojson files since it is too big
 
     # TODO convert to function taking dfpg and crs
 
