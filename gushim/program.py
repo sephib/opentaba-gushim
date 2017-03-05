@@ -10,6 +10,7 @@ from io import open as io_open
 import os
 import sys
 import yaml
+from io import open as io_open
 from git import Repo
 
 sys.path.insert(0, 'opentaba-gushim-prj')
@@ -36,6 +37,7 @@ EXPORT_ALL_GUSHIM = True
 REPO_DIR = '../'
 NEW_BRANCH = False
 PUSH_TO_GITHUB = False
+
 
 
 
@@ -195,14 +197,11 @@ def main():
                             logger.debug('Successfully deleted temp_geojson file: {0}'.format(export_temp_geojson_file))
                         except OSError, e:
                             print ("Error: {} - {}.".format(e.message, e.strerror))
-
                 except OSError, e:
                     print ("Error: {} - {}.".format(e.message, e.strerror))
-
-
                     logger.warning('failed to save geojson for: {0}'.format(local))
         logger.debug('Finished to saved files to GeoJSON')
-
+    
     if EXPORT_ALL_GUSHIM:
         all_gushim_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format('ISRAEL_GUSHIM'))
         all_local_json = df_polygon_att_wgs.to_json()
