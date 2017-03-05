@@ -167,14 +167,12 @@ def main():
     # Prepare dataframe with relevant topojson column
     df_polygon_att_wgs['Name'] = df_polygon_att_wgs['GUSH_NUM']  # df_local.rename(columns={'GUSH_NUM': 'name'}, inplace=True)
 
-
     # export each locality as geojson
     for local in localities:
         df_local = df_polygon_att_wgs[(df_polygon_att_wgs.EngName == local) & (df_polygon_att_wgs.Pop2015 > MIN_POPULATION)]
         if not df_local.empty:
             file_name_string = "".join(x for x in local if x.isalnum()).encode('utf-8').lower()  #remove unsafe characters
             try:
-
                 export_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format(file_name_string))
                 if EXPORT_TO_GEOJSON:
                     local_geojson = df_local.to_json()
@@ -199,8 +197,6 @@ def main():
 
             except OSError, e:
                 print ("Error: {} - {}.".format(e.message, e.strerror))
-
-
                 logger.warning('failed to save geojson for: {0}'.format(local))
     logger.debug('Finished to saved files to GeoJSON')
 
@@ -212,10 +208,9 @@ def main():
         filename, _ = os.path.splitext(all_gushim_file)
         topojson_file = filename + '.topojson'
         geo_utils.geoson_to_topojson(all_gushim_file, topojson_file)
+        # TODO zip geojson file and delete the original geojson files since it is too big
 
     # TODO convert to function taking dfpg and crs
-
-
 
     logger.info('Successfully  created  Polygon in geopandas')
 
