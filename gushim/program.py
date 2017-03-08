@@ -14,33 +14,34 @@ from gushim import geo_utils
 
 
 def main():
-    utilities.config(workspace_folder='../temp/data', log_console=True, log_file=True )
+    utilities.config(log_console=True, log_file=True )
     logger = utilities.get_logger(level=lg.DEBUG)
     datetime_str = datetime.datetime.utcnow().strftime('%Y%m%d_%H%M')
 
     logger.info("Program started")
 
-    workspace_folder = utilities.get_or_create_folder(gushimconfig.WORKSPACE_FOLDER)
-    export_folder = utilities.get_or_create_folder(gushimconfig.EXPORT_FOLDER)
+    base_folder = os.path.abspath(os.path.dirname(__file__))
+    path_to_folder = os.path.join(base_folder, gushimconfig.WORKSPACE_FOLDER)
+    workspace_folder = utilities.get_or_create_folder(path_to_folder)
+    path_to_folder = os.path.join(base_folder, gushimconfig.EXPORT_FOLDER)
+    export_folder = utilities.get_or_create_folder(path_to_folder)
     logger.debug('The workspace folder is: {0}'.format(workspace_folder))
 
-    base_folder = os.path.abspath(os.path.dirname(__file__))
     repo = Repo(gushimconfig.REPO_DIR)
     if gushimconfig.NEW_BRANCH:
         origin = repo.create_remote(datetime_str, repo.remotes.origin.url)
         repo.create_head(datetime_str, origin.refs.master)
 
     if not gushimconfig.LOAD_SHAPEFILE:
-        # Load Yeshuvim mask data into pandas
+        # Load Yeshuvim m.ask data into pandas
         path_to_file = os.path.join(base_folder, gushimconfig.YESHUV_MASK_FILE)
         df_yeshuv = pd.read_csv(path_to_file, header=0, encoding='utf-8-sig', index_col=False)
         logger.info('Successfully loaded yeshuv file {0} into pandas'.format(gushimconfig.YESHUV_MASK_FILE))
 
         # Download file from MAPI
-        # file_name = mapi.get_gushim(workspace_folder, gushim_url)  #include copy
-        # # file_name = r'opentaba_gushim_prj/gushim/workspace/file_download.zip'
-        # compress.zip_uncompress(file_name, workspace_folder)
-        # logger.debug('Successfully uncompressed file: {0}'.format(file_name))
+        file_name = mapi_service.get_gushim(workspace_folder, gushimconfig.GUSHIM_URL)
+        utilities.zip_uncompress(file_name)
+        logger.debug('Successfully uncompressed file: {0}'.format(file_name))
 
         # Load attribute data into geopandas
         csv_att_file = mapi_service.get_mapi_uncompress_file(workspace_folder, gushimconfig.END_ATTRIBUTE_FILE)

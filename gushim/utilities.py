@@ -6,6 +6,7 @@ import os
 import sys
 import unicodedata
 import yaml
+import zipfile
 
 
 
@@ -241,3 +242,13 @@ def make_str(value):
     except:
         # python 3.x has no unicode type, so if error, use str type
         return str(value)
+
+
+def zip_uncompress(filename, folder_path=None):
+    logger = lg.getLogger(__name__)
+    if not folder_path:
+        folder_path = os.path.dirname(filename)
+    with zipfile.ZipFile(filename, "r") as zip_ref:
+        zip_ref.extractall(folder_path)
+    logger.debug('Uncompressed file into {0}'.format(folder_path))
+

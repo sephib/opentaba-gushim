@@ -5,11 +5,13 @@ import shutil
 import requests
 import datetime
 
+from gushim import utilities
+
 
 def get_gushim(folder, url=None):
-    logger = logging.getLogger(__name__)
+    logger = utilities.get_logger()
     if not url:
-        logger.warning('Need URL to download file from ')
+        logger.error('Need URL to download file from ')
         return FileNotFoundError
     data = get_data_from_url(url)
     name = 'file_download'
@@ -24,16 +26,17 @@ def get_data_from_url(url):
 
 
 def save_file(folder, name, data):
-    logger = logging.getLogger(__name__)
+    logger = utilities.get_logger()
     file_name = os.path.join(folder, name + '.zip')
     with open(file_name, 'wb') as fout:
         shutil.copyfileobj(data, fout)
 
     datetime_stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
     file_name_with_date = 'MapiGushim{0}{1}'.format(datetime_stamp, '.zip')
-    os.rename(file_name, file_name_with_date)
-    logger.info('Downloaded and saved file {0}'.format(file_name_with_date ))
-    return file_name_with_date
+    new_file_name = os.path.join(folder,file_name_with_date)
+    os.rename(file_name, new_file_name)
+    logger.info('Downloaded and saved file {0}'.format(new_file_name))
+    return new_file_name
 
 
 def get_mapi_uncompress_file(folder_path, mapi_format):
