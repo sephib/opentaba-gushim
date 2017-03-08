@@ -1,11 +1,12 @@
 from  gdal import ogr, osr
-import logging
+import logging as lg
 # import dataconverters.commas as commas
 import csv
 import os
 import subprocess
 import sys
 from topojson import topojson
+from gushim import utilities
 
 def csv_to_geojson(file_name, output_geojson=None):
     logger = logging.getLogger(__name__)
@@ -54,12 +55,13 @@ def csv_to_geojson(file_name, output_geojson=None):
 
 
 def geoson_to_topojson(in_path, out_path, quantization=1e6, simplify=0.0001):
-    logger = logging.getLogger(__name__)
+    # logger = logging.getLogger(__name__)
+    logger = utilities.get_logger(level=lg.DEBUG)
 
     # give it a path in and out
     try:
         topojson(in_path, out_path, quantization, simplify)
-        logger.debug('Converted geojson into {0}'.format(out_path))
+        logger.info('Converted geojson into {0}'.format(out_path))
     except:
         raise
 

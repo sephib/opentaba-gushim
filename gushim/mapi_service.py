@@ -34,3 +34,14 @@ def save_file(folder, name, data):
     os.rename(file_name, file_name_with_date)
     logger.info('Downloaded and saved file {0}'.format(file_name_with_date ))
     return file_name_with_date
+
+
+def get_mapi_uncompress_file(folder_path, mapi_format):
+    """
+    :param folder_path: Location of the unzip file
+    :param mapi_format: The file format of the gushim unzipped file - currently csv
+    :return: return filename
+    """
+    for (dir_path, dir_names, file_names) in os.walk(folder_path):
+        csv_files = [os.path.join(dir_path, fi) for fi in file_names if fi.endswith(mapi_format)][0]
+    return csv_files
