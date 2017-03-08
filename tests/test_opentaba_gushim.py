@@ -20,5 +20,17 @@ gs.log('test error', level=lg.ERROR)
 
 
 def test_imports():
+    import json, math, sys, os, io, ast, unicodedata, hashlib, re, random, time, warnings, datetime as dt, logging as lg
+    from collections import OrderedDict, Counter
+    from itertools import groupby, chain
+    from dateutil import parser as date_parser
+    import requests, numpy as np, pandas as pd, geopandas as gpd
+    from shapely.geometry import Polygon
+
+
+def connect_to_mapi():
     pass
-    
+
+
+
+

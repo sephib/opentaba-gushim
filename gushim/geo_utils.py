@@ -1,4 +1,4 @@
-from  gdal import ogr, osr
+# from  gdal import ogr, osr
 import logging as lg
 # import dataconverters.commas as commas
 import csv
