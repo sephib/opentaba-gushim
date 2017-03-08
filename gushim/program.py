@@ -2,10 +2,8 @@ import datetime
 import logging as lg
 import pandas as pd
 import geopandas as gp
-from shapely.geometry import Point, Polygon, LineString
+from shapely.geometry import Polygon
 import os
-import sys
-import yaml
 from io import open as io_open
 from git import Repo
 
