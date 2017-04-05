@@ -39,7 +39,8 @@ setup(name='gushim',
                         'geopandas>=0.2.1',
                         'Shapely>=1.5',
                         'PyYAML>=3.12',
-                        'topojson>=0.2.0'],
+                        # 'topojson>=0.2.0'
+                        ],
 
       )
 
