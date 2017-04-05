@@ -1,0 +1,19 @@
+language: python
+
+python:
+    - "2.7"
+
+before_install:
+    - pip install --upgrade pip
+    - pip install --upgrade wheel
+
+install:
+    - "pip install -r requirements.txt --use-mirrors"
+    - "pip install coverage"
+    - "pip install coveralls"
+
+script:
+    - "coverage run --source=opentaba_gushim_prj setup.py test --verbose"
+
+after_success:
+    - coveralls
