@@ -105,7 +105,7 @@ def main():
                 if gushimconfig.EXPORT_TO_GEOJSON:
                     local_geojson = df_local.to_json()
                     with io_open(export_file, 'w', encoding='utf-8') as f:
-                        f.write(unicode(local_geojson))
+                        f.write(local_geojson)
                     # with io_open(export_file, 'w', encoding='utf-8') as f:
                     #     df_local.to_json(f, force_ascii=False)
                 if gushimconfig.EXPORT_TO_TOPOJSON:
@@ -121,10 +121,10 @@ def main():
                     try:
                         os.remove(export_temp_geojson_file)
                         logger.debug('Successfully deleted temp_geojson file: {0}'.format(export_temp_geojson_file))
-                    except OSError, e:
+                    except OSError as e:
                         print ("Error: {} - {}.".format(e.message, e.strerror))
 
-            except OSError, e:
+            except OSError as e:
                 print ("Error: {} - {}.".format(e.message, e.strerror))
                 logger.warning('failed to save geojson for: {0}'.format(local))
     logger.debug('Finished to saved files to GeoJSON')
