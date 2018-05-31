@@ -1,3 +1,4 @@
+import re
 import time
 import logging as lg
 import datetime as dt
@@ -200,7 +201,6 @@ def get_logger(level=None, name=None, filename=None):
     return logger
 
 
-
 def get_or_create_folder(folder_name, current_folder=False):
     """
     :param folder_name: string
@@ -251,4 +251,22 @@ def zip_uncompress(filename, folder_path=None):
     with zipfile.ZipFile(filename, "r") as zip_ref:
         zip_ref.extractall(folder_path)
     logger.debug('Uncompressed file into {0}'.format(folder_path))
+
+
+def slugify(value, allow_unicode=False):
+    """
+    Convert to ASCII if 'allow_unicode' is False. Convert spaces to hyphens.
+    Remove characters that aren't alphanumerics, underscores, or hyphens.
+    Convert to lowercase. Also strip leading and trailing whitespace.
+    """
+    value = str(value)
+    if allow_unicode:
+        value = unicodedata.normalize('NFKC', value)
+    else:
+        value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+    value = re.sub(r'[^\w\s-]', '', value).strip().lower()
+    value = re.sub(r'[-\s]+', '-', value)
+    return value
+
+
 

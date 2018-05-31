@@ -6,6 +6,7 @@ from shapely.geometry import Polygon
 import os
 from io import open as io_open
 from git import Repo
+from pathlib import Path
 
 from gushim import mapi_service
 from gushim import utilities  # from .utilities import *
@@ -39,9 +40,13 @@ def main():
         logger.info('Successfully loaded yeshuv file {0} into pandas'.format(gushimconfig.YESHUV_MASK_FILE))
 
         # Download file from MAPI
-        file_name = mapi_service.get_gushim(workspace_folder, gushimconfig.GUSHIM_URL)
-        utilities.zip_uncompress(file_name)
-        logger.debug('Successfully uncompressed file: {0}'.format(file_name))
+        mapi_zip_file = Path(gushimconfig.WORKSPACE_FOLDER) / gushimconfig.GUSHIM_ZIP_FILE
+        if not mapi_zip_file.exists():
+            mapi_zip_file = mapi_service.get_gushim(workspace_folder, gushimconfig.GUSHIM_URL)
+
+        utilities.zip_uncompress(mapi_zip_file)
+        logger.debug('Successfully uncompressed file: {0}'.format(mapi_zip_file))
+
 
         # Load attribute data into geopandas
         csv_att_file = mapi_service.get_mapi_uncompress_file(workspace_folder, gushimconfig.END_ATTRIBUTE_FILE)
@@ -81,13 +86,14 @@ def main():
         df_polygon_att_wgs = df_polygon_att.to_crs({'init': 'epsg:4326'}).copy()
         logger.info('Successfully projected file GeoDataframe to WGS84')
     else:
-        df_polygon_att_wgs = gp.read_file(gushimconfig.SHAPEFILE_PATH)
+        gushim_shp = Path(base_folder) / gushimconfig.SHAPEFILE_PATH
+        df_polygon_att_wgs = gp.read_file(str(gushim_shp.absolute()))
         logger.info('Shapefile {} loaded into GeoPandas'.format(gushimconfig.SHAPEFILE_PATH))
 
     if gushimconfig.SAVE_GUSHIM_SHAPEFILE:
         # timestr = time.strftime("%Y%m%d_%H%M%S")
-        export_file = os.path.join(base_folder, export_folder, 'Gushim{0}.shp'.format(datetime_str))
-        df_polygon_att_wgs.to_file(export_file, encoding="utf-8")
+        export_file = Path(base_folder, export_folder, 'Gushim{0}.shp'.format(datetime_str))
+        df_polygon_att_wgs.to_file(export_file.absolute(), encoding="utf-8")
         logger.info('Successfully saved shapefile {0}'.format(export_file))
 
     # Get list of localities
@@ -99,9 +105,9 @@ def main():
     for local in localities:
         df_local = df_polygon_att_wgs[(df_polygon_att_wgs.EngName == local) & (df_polygon_att_wgs.Pop2015 > gushimconfig.MIN_POPULATION)]
         if not df_local.empty:
-            file_name_string = "".join(x for x in local if x.isalnum()).encode('utf-8').lower()  #remove unsafe characters
+            file_name_string = utilities.slugify(local) #remove unsafe characters
             try:
-                export_file = os.path.join(base_folder, export_folder, '{0}.geojson'.format(file_name_string))
+                export_file = Path(base_folder, export_folder, '{0}.geojson'.format(file_name_string))
                 if gushimconfig.EXPORT_TO_GEOJSON:
                     local_geojson = df_local.to_json()
                     with io_open(export_file, 'w', encoding='utf-8') as f:
@@ -166,9 +172,6 @@ def main():
 
 
     logger.info("Program completed")
-
-
-
 
 
 if __name__ == '__main__':
